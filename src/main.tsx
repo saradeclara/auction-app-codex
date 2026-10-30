@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter, Link, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import './styles.css';
+import './theme.css';
 
 type AuctionCategory = 'Art' | 'Collectibles' | 'Electronics' | 'Fashion' | 'Furniture' | 'Watches';
+type Theme = 'ivory' | 'sage' | 'midnight';
 
 interface Auction {
   id: string;
@@ -29,38 +32,55 @@ const auctions: Auction[] = [
 
 const formatMoney = (value: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(value);
 
-function Logo() { return <a className="logo" href="#/">M<span>·</span>A</a>; }
-function Header() { return <><div className="announcement">The Autumn Edit is live <span>—</span> discover exceptional objects</div><header><Logo /><nav><a href="#/">Browse auctions</a><a href="#/">How it works</a><a href="#/">Sell with us</a></nav><div className="header-actions"><button className="search-btn" aria-label="Search">⌕</button><button className="heart" aria-label="Saved items">♡<i>2</i></button><button className="sign-in">Sign in</button></div></header></> }
+function Logo() { return <Link className="logo" to="/">M<span>·</span>A</Link>; }
+function ThemeSwitcher({ theme, onThemeChange }: { theme: Theme; onThemeChange: (theme: Theme) => void }) {
+  const themes: Array<{ id: Theme; label: string }> = [
+    { id: 'ivory', label: 'Ivory' },
+    { id: 'sage', label: 'Sage' },
+    { id: 'midnight', label: 'Midnight' },
+  ];
 
-function Card({ item }: { item: Auction }) { return <a href={`#/auction/${item.id}`} className="auction-card"><div className="image-wrap"><img src={item.image} alt={item.title}/>{item.tag && <span className="pill">{item.tag}</span>}<button className="card-heart" onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.preventDefault(); e.currentTarget.classList.toggle('active') }}>♡</button></div><div className="card-copy"><div className="card-topline"><span>{item.category}</span><span className="time">● {item.time}</span></div><h3>{item.title}</h3><p>{item.maker}</p><div className="bid-row"><div><small>Current bid</small><strong>{formatMoney(item.bid)}</strong></div><span>{item.bids} bids</span></div></div></a> }
+  return <div className="theme-switcher" aria-label="Colour theme">
+    {themes.map(({ id, label }) => <button key={id} className={theme === id ? 'active' : ''} onClick={() => onThemeChange(id)}>{label}</button>)}
+  </div>;
+}
 
-function Home() {
+function Header({ showThemeSwitcher = false, theme = 'ivory', onThemeChange }: { showThemeSwitcher?: boolean; theme?: Theme; onThemeChange?: (theme: Theme) => void }) {
+  return <><div className="announcement">The Autumn Edit is live <span>—</span> discover exceptional objects</div><header><Logo /><nav><Link to="/">Browse auctions</Link><Link to="/">How it works</Link><Link to="/">Sell with us</Link></nav><div className="header-actions">{showThemeSwitcher && onThemeChange && <ThemeSwitcher theme={theme} onThemeChange={onThemeChange}/>}<button className="search-btn" aria-label="Search">⌕</button><button className="heart" aria-label="Saved items">♡<i>2</i></button><button className="sign-in">Sign in</button></div></header></>;
+}
+
+function Card({ item }: { item: Auction }) { return <Link to={`/auction/${item.id}`} className="auction-card"><div className="image-wrap"><img src={item.image} alt={item.title}/>{item.tag && <span className="pill">{item.tag}</span>}<button className="card-heart" onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.preventDefault(); e.currentTarget.classList.toggle('active') }}>♡</button></div><div className="card-copy"><div className="card-topline"><span>{item.category}</span><span className="time">● {item.time}</span></div><h3>{item.title}</h3><p>{item.maker}</p><div className="bid-row"><div><small>Current bid</small><strong>{formatMoney(item.bid)}</strong></div><span>{item.bids} bids</span></div></div></Link> }
+
+function Home({ theme, onThemeChange }: { theme: Theme; onThemeChange: (theme: Theme) => void }) {
   const [category, setCategory] = useState('All lots');
   const [sort, setSort] = useState('Ending soon');
   const [query, setQuery] = useState('');
   const categories: Array<'All lots' | AuctionCategory> = ['All lots', 'Art', 'Furniture', 'Watches', 'Collectibles', 'Fashion', 'Electronics'];
   const displayed = useMemo(() => auctions.filter(a => (category === 'All lots' || a.category === category) && a.title.toLowerCase().includes(query.toLowerCase())).sort((a,b) => sort === 'Price: high to low' ? b.bid-a.bid : 0), [category, query, sort]);
-  return <><Header /><main><section className="hero"><div className="hero-text"><p className="eyebrow">Curated auctions, weekly</p><h1>Objects worth<br/><em>competing</em> for.</h1><p className="intro">A considered marketplace for the rare, the beautiful, and the genuinely useful.</p><a className="dark-btn" href="#lots">Explore lots <span>↗</span></a></div><div className="hero-photo"><img src="https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=1600&q=90" alt="Sculptural vase on a table"/><div className="hero-stamp"><b>04</b><span>days left in<br/>the autumn edit</span></div></div></section><section className="filters" id="lots"><div className="tabs">{categories.map(c => <button key={c} className={category === c ? 'selected':''} onClick={() => setCategory(c)}>{c}</button>)}</div><div className="filter-actions"><label className="mini-search"><span>⌕</span><input value={query} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setQuery(e.target.value)} placeholder="Search lots"/></label><select value={sort} onChange={(e: React.ChangeEvent<HTMLSelectElement>)=>setSort(e.target.value)}><option>Ending soon</option><option>Price: high to low</option></select></div></section><section className="listing-head"><div><p className="eyebrow">Live now</p><h2>Lots closing soon</h2></div><span>{displayed.length} lots</span></section><section className="grid">{displayed.map(item => <Card key={item.id} item={item}/>)}</section></main><footer><Logo/><p>Exceptional objects, thoughtfully sourced.</p><span>© 2026 Meridian Auctions</span></footer></>;
+  return <><Header showThemeSwitcher theme={theme} onThemeChange={onThemeChange}/><main><section className="hero"><div className="hero-text"><p className="eyebrow">Curated auctions, weekly</p><h1>Objects worth<br/><em>competing</em> for.</h1><p className="intro">A considered marketplace for the rare, the beautiful, and the genuinely useful.</p><Link className="dark-btn" to="/#lots">Explore lots <span>↗</span></Link></div><div className="hero-photo"><img src="https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=1600&q=90" alt="Sculptural vase on a table"/><div className="hero-stamp"><b>04</b><span>days left in<br/>the autumn edit</span></div></div></section><section className="filters" id="lots"><div className="tabs">{categories.map(c => <button key={c} className={category === c ? 'selected':''} onClick={() => setCategory(c)}>{c}</button>)}</div><div className="filter-actions"><label className="mini-search"><span>⌕</span><input value={query} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setQuery(e.target.value)} placeholder="Search lots"/></label><select value={sort} onChange={(e: React.ChangeEvent<HTMLSelectElement>)=>setSort(e.target.value)}><option>Ending soon</option><option>Price: high to low</option></select></div></section><section className="listing-head"><div><p className="eyebrow">Live now</p><h2>Lots closing soon</h2></div><span>{displayed.length} lots</span></section><section className="grid">{displayed.map(item => <Card key={item.id} item={item}/>)}</section></main><footer><Logo/><p>Exceptional objects, thoughtfully sourced.</p><span>© 2026 Meridian Auctions</span></footer></>;
 }
 
 function AuctionPage({ item }: { item: Auction }) {
   const [amount, setAmount] = useState(item.bid + 50);
   const [placed, setPlaced] = useState(false);
-  return <><Header/><main className="detail"><div className="breadcrumb"><a href="#/">All auctions</a><span>/</span><a href="#/">{item.category}</a><span>/</span><b>{item.title}</b></div><div className="detail-grid"><section className="product"><div className="detail-image"><img src={item.image} alt={item.title}/><button className="card-heart">♡</button></div><div className="thumbs"><button className="active-thumb"><img src={item.image} alt=""/></button><button className="empty-thumb">+</button></div></section><aside className="bid-panel"><p className="eyebrow">Lot 0248 · {item.category}</p><h1>{item.title}</h1><p className="maker">{item.maker}</p><div className="divider"/><div className="auction-meta"><div><small>Current bid</small><strong>{formatMoney(placed ? amount : item.bid)}</strong><span>{item.bids + (placed ? 1 : 0)} bids</span></div><div className="ends"><small>Ends in</small><strong>{item.time}</strong><span>Today, 18:42 BST</span></div></div><div className="bid-box"><label>Your maximum bid</label><div><span>£</span><input type="number" value={amount} min={item.bid + 50} step="50" onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setAmount(Number(e.target.value))}/></div><small>Minimum next bid: {formatMoney(item.bid + 50)}</small><button className="place-bid" onClick={()=>setPlaced(true)}>{placed ? 'Bid placed ✓' : 'Place bid'}</button></div><p className="note">By placing a bid, you agree to our buyer’s premium and terms of sale.</p></aside></div><section className="description"><div><p className="eyebrow">The details</p><h2>A classic, with a story.</h2></div><div><p>Carefully inspected and selected by our specialists, this piece shows the character and considered design that makes it genuinely collectible.</p><p>Condition is commensurate with age. Please review the images and request a condition report before bidding.</p><dl><div><dt>Condition</dt><dd>Excellent</dd></div><div><dt>Location</dt><dd>London, UK</dd></div><div><dt>Authenticity</dt><dd>Verified by Meridian</dd></div></dl></div></section></main></>;
+  return <><Header/><main className="detail"><div className="breadcrumb"><Link to="/">All auctions</Link><span>/</span><Link to="/">{item.category}</Link><span>/</span><b>{item.title}</b></div><div className="detail-grid"><section className="product"><div className="detail-image"><img src={item.image} alt={item.title}/><button className="card-heart">♡</button></div><div className="thumbs"><button className="active-thumb"><img src={item.image} alt=""/></button><button className="empty-thumb">+</button></div></section><aside className="bid-panel"><p className="eyebrow">Lot 0248 · {item.category}</p><h1>{item.title}</h1><p className="maker">{item.maker}</p><div className="divider"/><div className="auction-meta"><div><small>Current bid</small><strong>{formatMoney(placed ? amount : item.bid)}</strong><span>{item.bids + (placed ? 1 : 0)} bids</span></div><div className="ends"><small>Ends in</small><strong>{item.time}</strong><span>Today, 18:42 BST</span></div></div><div className="bid-box"><label>Your maximum bid</label><div><span>£</span><input type="number" value={amount} min={item.bid + 50} step="50" onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setAmount(Number(e.target.value))}/></div><small>Minimum next bid: {formatMoney(item.bid + 50)}</small><button className="place-bid" onClick={()=>setPlaced(true)}>{placed ? 'Bid placed ✓' : 'Place bid'}</button></div><p className="note">By placing a bid, you agree to our buyer’s premium and terms of sale.</p></aside></div><section className="description"><div><p className="eyebrow">The details</p><h2>A classic, with a story.</h2></div><div><p>Carefully inspected and selected by our specialists, this piece shows the character and considered design that makes it genuinely collectible.</p><p>Condition is commensurate with age. Please review the images and request a condition report before bidding.</p><dl><div><dt>Condition</dt><dd>Excellent</dd></div><div><dt>Location</dt><dd>London, UK</dd></div><div><dt>Authenticity</dt><dd>Verified by Meridian</dd></div></dl></div></section></main></>;
+}
+
+function AuctionRoute() {
+  const { id } = useParams<{ id: string }>();
+  const item = auctions.find((auction) => auction.id === id);
+  return item ? <AuctionPage item={item}/> : <Navigate to="/" replace/>;
 }
 
 function App() {
-  const [hash, setHash] = useState(window.location.hash);
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('meridian-theme') as Theme) || 'ivory');
 
   useEffect(() => {
-    const syncRoute = () => setHash(window.location.hash);
-    window.addEventListener('hashchange', syncRoute);
-    return () => window.removeEventListener('hashchange', syncRoute);
-  }, []);
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('meridian-theme', theme);
+  }, [theme]);
 
-  const id = hash.match(/^#\/auction\/(.+)$/)?.[1];
-  const item = auctions.find((auction) => auction.id === id);
-  return item ? <AuctionPage item={item}/> : <Home/>;
+  return <BrowserRouter><Routes><Route path="/" element={<Home theme={theme} onThemeChange={setTheme}/>}/><Route path="/auction/:id" element={<AuctionRoute/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></BrowserRouter>;
 }
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element is missing.');
